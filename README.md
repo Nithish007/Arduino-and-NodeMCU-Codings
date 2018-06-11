@@ -1,0 +1,83 @@
+# thngspk_LM35
+This code uploads the data from LM35 sensor to your thingspeak channel...
+
+//Code Explanation
+//We are including ESP8266 WiFi library which provides ESP8266 specific WiFi routines and we are calling it to connect to the network.
+
+#include <ESP8266WiFi.h>
+//As explained above you have to copy and paste your ThinkSpeak write api key here.
+
+String apiWritekey = "ZS3UQDS51N8MJ90A";
+//Get and enter the “ssid” and “password” i.e.,  your WiFi name and password. Initialize the device with api domain ‘api.thingspeak.com’ and resolution variable.
+
+const char* ssid = "---YOUR SSID----";
+const char* password = "-----SSID PASSWORD-----";
+
+const char* server = "api.thingspeak.com";
+float resolution=3.3/1023;
+WiFiClient client;
+//Put your setup or configuration code in the setup function, it will only run once during the startup.
+
+void setup() 
+{
+  Serial.begin(115200);
+  WiFi.disconnect();
+  delay(10);
+  WiFi.begin(ssid, password);
+//Actual connection to WiFi is initialized by calling below instructions.
+
+ Serial.println();
+ Serial.println();
+ Serial.print("Connecting to ");
+ Serial.println(ssid);
+
+ WiFi.begin(ssid, password);
+//Connection process can take couple of seconds. While() loop checks the module connection with the WiFi network. If it is connected to WiFi then it will display WiFi connected message on the serial monitor and web server starts, otherwise it will continue to display “dots (……)”.
+
+  while (WiFi.status() != WL_CONNECTED) 
+  {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("ESP8266 connected to wifi...");
+  Serial.println(ssid);
+  Serial.println();
+}
+//Put your main code in void loop() function to run repeatedly. LM35 Sensor is connected to analog pin A0 of the ESP8266. Temperature value will be calculated from ADC value according to the following formula.
+
+void loop() 
+{
+//  Serial.println(ssid);
+  float temp = ((analogRead(A0) * resolution) * 100);
+//This loop connects to ThingSpeak server and ESP8266 sends the current temperature value to ThingSpeak server.
+
+
+
+  if (client.connect(server,80))
+  {
+    String tsData = apiWritekey;
+    tsData +="&field1=";
+    tsData += String(temp);
+    tsData += "\r\n\r\n";
+
+    client.print("POST /update HTTP/1.1\n");
+    client.print("Host: api.thingspeak.com\n");
+    client.print("Connection: close\n");
+    client.print("X-THINGSPEAKAPIKEY: "+apiWritekey+"\n");
+    client.print("Content-Type: application/x-www-form-urlencoded\n");
+    client.print("Content-Length: ");
+    client.print(tsData.length());
+    client.print("\n\n");
+    client.print(tsData);
+
+    Serial.print("Temperature: ");
+    Serial.print(temp);
+    Serial.println(" -->Uploaded to Thingspeak server...");
+  }
+  client.stop(); // stops client communication.
+ Serial.println();
+  Serial.println("Waiting to upload next reading..."); // Waits for next reading after displaying current reading.
+  Serial.println();
+  delay(15000);
+}
